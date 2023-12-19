@@ -3,8 +3,9 @@ CPP_FILE = main.cpp
 SFML_LIBRARIES = -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 
 all: $(EXECUTABLE)
-$(EXECUTABLE): $(CPP_FILE) $(SFML_LIBRARIES)
-g++ -std=c++17 -o $(EXECUTABLE) $(CPP_FILE) $(SFML_LIBRARIES)
+
+$(EXECUTABLE): $(CPP_FILE)
+	g++ -std=c++17 -o $(EXECUTABLE) $(CPP_FILE) $(SFML_LIBRARIES)
 
 
 install:
