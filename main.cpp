@@ -356,7 +356,7 @@ int main() {
     snakeSize = snakeBody.size();
     sf::Event event;
     // Update the position of the score text
-    scoreText.setPosition(window.getSize().x - 120, 20);
+    scoreText.setPosition(window.getSize().x - 130, 20);
 
     while (window.pollEvent(event)) {
       if (event.type == sf::Event::Closed) {
