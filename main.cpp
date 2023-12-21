@@ -94,6 +94,8 @@ void initGame(sf::Vector2u gameWindowSize) {
   bgm->play();
   serpantSound->play();
 
+  player.score = 1;
+
   // set initial position of snake and its food
   snakeBody.push_back({10, 10});
   rat.posx = random() % (gameWindowSize.x - 50) + 10;
