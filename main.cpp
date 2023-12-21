@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <memory>
 
 enum Direction {
   LEFT = 0b1,
