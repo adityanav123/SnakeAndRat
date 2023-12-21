@@ -356,7 +356,7 @@ int main() {
     snakeSize = snakeBody.size();
     sf::Event event;
     // Update the position of the score text
-    scoreText.setPosition(window.getSize().x - 100, 10);
+    scoreText.setPosition(window.getSize().x - 130, 20);
 
     while (window.pollEvent(event)) {
       if (event.type == sf::Event::Closed) {
@@ -438,7 +438,7 @@ int main() {
       if (isBonusLevel) {
         sf::Text bonusText("Bonus Level!", font, 30);
         bonusText.setPosition(
-            window.getSize().x / 2 - bonusText.getGlobalBounds().width / 2,
+            (window.getSize().x / 2) - (bonusText.getGlobalBounds().width / 2),
             window.getSize().y / 2 - bonusText.getGlobalBounds().height / 2);
         window.draw(bonusText);
       }
