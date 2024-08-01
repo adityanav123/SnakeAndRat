@@ -1,43 +1,48 @@
-## Snake And Rat game
+# Snake And Rat game
 
--   Language Used : C++
--   Libraries Used : libsfml
+-   [Game Overview](#Game-Overview)
+-   [How to Execute?](#How-to-Execute)
+-   [Alternate Compilation](#Alternate-Compilation)
+-   [Installing Clang](#install-clang)
+-   [See UI of Game](#game-ui)
+
+## Game Overview
+
+-   Language Used : **C++**
+-   Libraries Used : **libsfml**
 -   OS : Linux (Ubuntu/Debian Based)
 
-### How to Execute?
+## How to Execute?
 
-```bash
-~> make
-```
+1. Generate the Executable
+   ![Make Command](./assets/images/README-assets/make-command.png)
 
--   will generate the executable
+2. Install Dependencies
+   ![Make Install Command](./assets/images/README-assets/make-install-command.png)
 
-```bash
-~> make install
-```
+3. Delete the Executable
+   ![Make clean Command](./assets/images/README-assets/make-clean-command.png)
 
--   will install the required libraries/language support
+## Alternate Compilation
 
-```bash
-~> make clean
-```
-
--   will delete the generated executable
-
-[Note]
 There is also a `compile-game.sh` file present, which can also be used to generate executable.
+![compilation Script](./assets/images/README-assets/compile-using-clang.png)
 
-```bash
-~> ./compile-game.sh main.cpp # compile and generate executable (USES CLANG++)
-~> ./main # to run the game
-```
+## Install Clang++
 
-For clang Support :
-Install clang++ on Ubuntu/Debian Based Systems:
+![install clang Command](./assets/images/README-assets/install-clang.png)
 
-```bash
-    wget https://apt.llvm.org/llvm.sh
-    chmod u+x llvm.sh
-    sudo ./llvm.sh 17 # clang version 17
-    clang++ --version
-```
+## Game UI
+
+<!-- ![InGame UI](./assets/images/README-assets/game_image.png) -->
+<img src="./assets/images/README-assets/game_image.png" alt="InGameUI" width="500" height="500" />
+
+<p align="center">This is the in-game UI.</p>
+
+<!-- ![GameOver UI](./assets/images/README-assets/game-over.png) -->
+
+<img src="./assets/images/README-assets/game-over.png" alt="GameOverUI" width="500" height="500" />
+
+<p align="center">This is the game over UI.</p>
+
+<hr>

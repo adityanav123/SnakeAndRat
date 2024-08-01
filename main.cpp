@@ -1,103 +1,45 @@
+#include "GameProp.hpp"
 #include "sounds.hpp"
 #include <SFML/Graphics.hpp>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/WindowStyle.hpp>
-#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
-#include <memory>
 
-enum Direction {
-  LEFT = 0b1,
-  RIGHT = 0b10,
-  UP = 0b100,
-  DOWN = 0b1000,
-};
+// Global Declarations
+SoundManager soundManager;
 
-enum GameState { RUNNING, FINISH, PAUSE };
-
-struct Snake {
-  int posx, posy;
-};
-
-struct Rat {
-  int posx, posy;
-  int radius;
-
-  std::vector<float> centerCoord() {
-    float centerX = posx + radius;
-    float centerY = posy + radius;
-    return {centerX, centerY};
-  }
-
-  // method to check if a point lies within a circle
-  bool canEat(int x, int y) {
-    float distance = std::sqrt(std::pow(x - posx, 2) + std::pow(y - posy, 2));
-    float collisionThreshold = 20.f;
-    return distance <= 20.f;
-  }
-
-} rat;
-
-struct Player {
-  int score;
-  GameState gameState;
-
-  bool gameOver() { return gameState == GameState::FINISH; }
-
-} player;
-
-// Game Properties
-bool isBonusLevel = false;
-
-// snake properties
-int snakeSize = 1;
-std::vector<Snake> snakeBody;
-auto currentMove = Direction::UP;
-Direction previousMove = Direction::UP;
-static int snakeSpeed = 150;
-//////////////////
-
-// Extra Sounds
-std::unique_ptr<SoundPlayer> chew =
-    std::make_unique<SoundPlayer>("./assets/sounds/single-chew.wav");
-std::unique_ptr<SoundPlayer> death =
-    std::make_unique<SoundPlayer>("./assets/sounds/funny-death-1.wav");
-
-inline void chewFood() {
-  chew->setVolume(100.f);
-  chew->play();
-}
-
-void unfortunate() {
-  death->setVolume(110.f);
-  death->play();
-}
-
-//////////////////
+PlayerProperties player;
+GameProperties Game;
+Rat rat;
+/**/
 
 void initGame(sf::Vector2u gameWindowSize) {
-  SoundPlayer *bgm = new SoundPlayer("./assets/sounds/background.wav");
-  SoundPlayer *serpantSound =
-      new SoundPlayer("./assets/sounds/serpant-sound.wav");
+  soundManager.addSound("background", "./assets/sounds/background.wav");
+  soundManager.addSound("serpent", "./assets/sounds/serpant-sound.wav");
+  soundManager.addSound("chew", "./assets/sounds/single-chew.wav");
+  soundManager.addSound("death", "./assets/sounds/funny-death-1.wav");
 
-  // set bgm properties
-  bgm->setVolume(35.f);
-  serpantSound->setVolume(50.f);
-  bgm->loopIt();
-  serpantSound->loopIt();
+  soundManager.setVolume("background", 35.f);
+  soundManager.setVolume("serpent", 50.f);
+  soundManager.loopIt("background");
+  soundManager.loopIt("serpent");
 
-  // play bgm
-  bgm->play();
-  serpantSound->play();
+  soundManager.playSound("background");
+  soundManager.playSound("serpent");
 
-  player.score = 1;
+  // Set the player's initial score
+  player.setScore(1);
 
-  // set initial position of snake and its food
-  snakeBody.push_back({10, 10});
+  // Set the game's initial properties
+  Game.setSnakeSize(1);
+  Game.addSnake({10, 10});
+  Game.setIsBonusLevel(false);
+
+  // Initialize the rat
   rat.posx = random() % (gameWindowSize.x - 50) + 10;
   rat.posy = random() % (gameWindowSize.y - 50) + 10;
   rat.radius = 10.f;
@@ -105,24 +47,22 @@ void initGame(sf::Vector2u gameWindowSize) {
 
 // check bonus level
 void checkForBonusLevel() {
-  if (player.score % 5 == 0) {
-    isBonusLevel = true;
+  if (player.getScore() % 5 == 0) {
+    Game.setIsBonusLevel(true);
     rat.radius = 20.f;
-    // Change background or apply reddish gradient for bonus level
-    // Example: window.clear(sf::Color(255, 100, 100)); // Reddish background
   } else {
-    isBonusLevel = false;
+    Game.setIsBonusLevel(false);
     rat.radius = 10.f;
   }
 }
 
 void incrementScore() {
-  player.score++;
+  player.incrementScore();
   checkForBonusLevel();
 }
 
 void bonusLevelBackground(sf::RenderWindow &window) {
-  if (isBonusLevel) {
+  if (Game.getIsBonusLevel()) {
     sf::RectangleShape redTint(
         sf::Vector2f(window.getSize().x, window.getSize().y));
     redTint.setFillColor(
@@ -134,20 +74,21 @@ void bonusLevelBackground(sf::RenderWindow &window) {
 }
 
 // SETTINGS
+// Draw a settings icon in the top-left corner of the window
 void drawSettingsIcon(sf::RenderWindow &window) {
-  // Draw a settings icon in the top-left corner of the window
   sf::RectangleShape settingsIcon(sf::Vector2f(30.f, 30.f));
   settingsIcon.setFillColor(sf::Color::Blue); // Placeholder color
   settingsIcon.setPosition(10.f, 10.f);
   window.draw(settingsIcon);
 }
 
-// gradient of red, currently - experimental
+// gradient of shades of red, currently
+// experimental
 void drawGradientBackground(sf::RenderWindow &window) {
-  if (isBonusLevel) {
-    sf::Color startColor(255, 0, 0, 50); // Light red color
-    sf::Color endColor(255, 0, 0, 150);  // Darker red color
-    int rectCount = 10; // Number of rectangles for the gradient effect
+  if (Game.getIsBonusLevel()) {
+    sf::Color startColor(255, 0, 0, 50);
+    sf::Color endColor(255, 0, 0, 150);
+    int rectCount = 10;
 
     float gradientHeight = static_cast<float>(window.getSize().y) / rectCount;
     for (int i = 0; i < rectCount; ++i) {
@@ -156,8 +97,6 @@ void drawGradientBackground(sf::RenderWindow &window) {
       float yPos = i * gradientHeight;
       gradientRect.setPosition(0, yPos);
 
-      // Interpolate color between startColor and endColor based on rectangle
-      // position
       float colorRatio = yPos / window.getSize().y;
       sf::Color blendedColor(
           static_cast<sf::Uint8>(startColor.r +
@@ -180,7 +119,7 @@ void drawGradientBackground(sf::RenderWindow &window) {
 // DRAW THE SNAKE
 void drawSnake(sf::RenderWindow &window, sf::Font &font) {
   int idx = 0;
-  for (const auto &segmentPos : snakeBody) {
+  for (const auto &segmentPos : Game.getSnakeBody()) {
     sf::RectangleShape body(sf::Vector2f(20.f, 20.f));
     body.setFillColor(sf::Color::Green);
 
@@ -227,9 +166,9 @@ void drawRat(sf::RenderWindow &window, sf::Font &font) {
 
 // check self collision
 bool checkSnakeCollision() {
-  for (int i = 1; i < snakeSize; ++i) {
-    if (snakeBody[0].posx == snakeBody[i].posx &&
-        snakeBody[0].posy == snakeBody[i].posy) {
+  for (int i = 1; i < Game.getSnakeSize(); ++i) {
+    auto snake = Game.getSnakeBody();
+    if (snake[0].posx == snake[i].posx && snake[0].posy == snake[i].posy) {
       return true;
     }
   }
@@ -247,27 +186,44 @@ int checkPositionOutOfBounds(int position, int boundary) {
 }
 
 void updateSnakePosition(sf::Vector2u gameWindowSize, int stepCnt) {
-  if (snakeSize == 1) {
-    int new_posx = snakeBody[0].posx +
-                   (currentMove & Direction::RIGHT ? stepCnt : 0) -
-                   (currentMove & Direction::LEFT ? stepCnt : 0);
-    int new_posy = snakeBody[0].posy +
-                   (currentMove & Direction::DOWN ? stepCnt : 0) -
-                   (currentMove & Direction::UP ? stepCnt : 0);
+  if (Game.onlyHeadLeft()) {
+    auto &snakeHead = Game.getSnakeBody()[0];
+    int new_posx =
+        snakeHead.posx +
+        ((Game.getCurrentMove() & Direction::RIGHT) == Direction::RIGHT
+             ? stepCnt
+             : 0) -
+        ((Game.getCurrentMove() & Direction::LEFT) == Direction::LEFT ? stepCnt
+                                                                      : 0);
+    int new_posy =
+        snakeHead.posy +
+        ((Game.getCurrentMove() & Direction::DOWN) == Direction::DOWN ? stepCnt
+                                                                      : 0) -
+        ((Game.getCurrentMove() & Direction::UP) == Direction::UP ? stepCnt
+                                                                  : 0);
 
-    snakeBody[0].posx = checkPositionOutOfBounds(new_posx, gameWindowSize.x);
-    snakeBody[0].posy = checkPositionOutOfBounds(new_posy, gameWindowSize.y);
+    snakeHead.posx = checkPositionOutOfBounds(new_posx, gameWindowSize.x);
+    snakeHead.posy = checkPositionOutOfBounds(new_posy, gameWindowSize.y);
   } else {
-    for (int i = snakeSize - 2; i >= 0; --i) {
+    auto &snakeBody = Game.getSnakeBody();
+    for (int i = Game.getSnakeSize() - 2; i >= 0; --i) {
       snakeBody[i + 1] = snakeBody[i];
     }
-    // Update head position with overflow/underflow checks
-    int new_posx = snakeBody[0].posx +
-                   (currentMove & Direction::RIGHT ? stepCnt : 0) -
-                   (currentMove & Direction::LEFT ? stepCnt : 0);
-    int new_posy = snakeBody[0].posy +
-                   (currentMove & Direction::DOWN ? stepCnt : 0) -
-                   (currentMove & Direction::UP ? stepCnt : 0);
+
+    // update snake head
+    int new_posx =
+        snakeBody[0].posx +
+        ((Game.getCurrentMove() & Direction::RIGHT) == Direction::RIGHT
+             ? stepCnt
+             : 0) -
+        ((Game.getCurrentMove() & Direction::LEFT) == Direction::LEFT ? stepCnt
+                                                                      : 0);
+    int new_posy =
+        snakeBody[0].posy +
+        ((Game.getCurrentMove() & Direction::DOWN) == Direction::DOWN ? stepCnt
+                                                                      : 0) -
+        ((Game.getCurrentMove() & Direction::UP) == Direction::UP ? stepCnt
+                                                                  : 0);
 
     snakeBody[0].posx = checkPositionOutOfBounds(new_posx, gameWindowSize.x);
     snakeBody[0].posy = checkPositionOutOfBounds(new_posy, gameWindowSize.y);
@@ -279,74 +235,57 @@ void moveSnake(const sf::RenderWindow &window) {
   static sf::Clock clock;
   const int movementStepCnt = 25;
 
-  if (clock.getElapsedTime().asMilliseconds() > snakeSpeed) {
+  if (clock.getElapsedTime().asMilliseconds() > Game.getSnakeSpeed()) {
     clock.restart();
-
     sf::Vector2u gameWindowSize = window.getSize();
-
     updateSnakePosition(gameWindowSize, movementStepCnt);
   }
 }
-/////////////////////
 
-// MOVE RAT////////////////////////
-void genRatPos(sf::Vector2u gameWindowSize) {
+void moveRat(sf::Vector2u gameWindowSize) {
   rat.posx = random() % (gameWindowSize.x - 50) + 10;
   rat.posy = random() % (gameWindowSize.y - 50) + 10;
 }
 // CHECK IF RAT EATEN
-bool snakeAteRat() { return rat.canEat(snakeBody[0].posx, snakeBody[0].posy); }
-
-void checkAndMoveRat(sf::RenderWindow &window) {
-  if (snakeAteRat()) {
-    incrementScore();
-    // find new coordinates for rat and display
-    genRatPos(window.getSize());
-
-    // add a new snake
-    snakeBody.push_back(
-        {snakeBody[snakeSize - 1].posx + 2, snakeBody[snakeSize - 1].posy + 2});
-
-    // make chewing sounds
-    chewFood();
-  }
+bool eatRat() {
+  auto &snakeHead = Game.getSnakeBody()[0];
+  return rat.canEat(snakeHead.posx, snakeHead.posy, 15.f);
 }
 
-////////////////////
+void moveRat(sf::RenderWindow &window) {
+  if (eatRat()) {
+    incrementScore();
+    moveRat(window.getSize());
+
+    auto &snakeBody = Game.getSnakeBody();
+    Snake newSnake{snakeBody[Game.getSnakeSize() - 1].posx + 2,
+                   snakeBody[Game.getSnakeSize() - 1].posy + 2};
+
+    Game.addSnake(newSnake);
+
+    // make chewing sounds
+    soundManager.playChewSound();
+  }
+}
 
 // SNAKE MOVEMENT CHECK
 void handleInput() {
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) &&
-      previousMove != Direction::DOWN) {
-    currentMove = Direction::UP;
+      Game.getPreviousMove() != Direction::DOWN) {
+    Game.setCurrentMove(Direction::UP);
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) &&
-             previousMove != Direction::UP) {
-    currentMove = Direction::DOWN;
+             Game.getPreviousMove() != Direction::UP) {
+    Game.setCurrentMove(Direction::DOWN);
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) &&
-             previousMove != Direction::RIGHT) {
-    currentMove = Direction::LEFT;
+             Game.getPreviousMove() != Direction::RIGHT) {
+    Game.setCurrentMove(Direction::LEFT);
   } else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) &&
-             previousMove != Direction::LEFT) {
-    currentMove = Direction::RIGHT;
+             Game.getPreviousMove() != Direction::LEFT) {
+    Game.setCurrentMove(Direction::RIGHT);
   }
 }
 
-int main() {
-  // font init
-  sf::Font font;
-  if (!font.loadFromFile("./assets/fonts/shadows-into-light.ttf")) {
-    std::cerr << "Could not load font file" << std::endl;
-    return -1;
-  }
-  // Window creation
-  sf::RenderWindow window(sf::VideoMode(500, 300), "Snake And Rat",
-                          sf::Style::Resize | sf::Style::Close);
-
-  // can also put fps limit
-  //   window.setFramerateLimit(60); // 60FPS
-
-  initGame(window.getSize());
-
+void runGame(sf::RenderWindow &window, sf::Font &font) {
   // Game Score
   sf::Text scoreText;
   scoreText.setFont(font);
@@ -355,8 +294,8 @@ int main() {
 
   // main game loop
   while (window.isOpen()) {
-    snakeSize = snakeBody.size();
     sf::Event event;
+
     // Update the position of the score text
     scoreText.setPosition(window.getSize().x - 130, 20);
 
@@ -372,45 +311,43 @@ int main() {
       }
     }
 
-    if (player.gameState == GameState::RUNNING) {
+    if (player.getGameState() == GameState::RUNNING) {
       if (checkSnakeCollision()) {
-        unfortunate();
-        player.gameState = GameState::FINISH;
+        soundManager.playDeathSound();
+        player.setGameState(GameState::FINISH);
       }
 
       // movement
       handleInput();
-
-      // Check if the new direction is valid based on previous direction
-      if (currentMove == Direction::UP && previousMove != Direction::DOWN) {
-        previousMove = currentMove;
-      } else if (currentMove == Direction::DOWN &&
-                 previousMove != Direction::UP) {
-        previousMove = currentMove;
-      } else if (currentMove == Direction::LEFT &&
-                 previousMove != Direction::RIGHT) {
-        previousMove = currentMove;
-      } else if (currentMove == Direction::RIGHT &&
-                 previousMove != Direction::LEFT) {
-        previousMove = currentMove;
+      if (Game.getCurrentMove() == Direction::UP &&
+          Game.getPreviousMove() != Direction::DOWN) {
+        Game.setPreviousMove(Game.getCurrentMove());
+      } else if (Game.getCurrentMove() == Direction::DOWN &&
+                 Game.getPreviousMove() != Direction::UP) {
+        Game.setPreviousMove(Game.getCurrentMove());
+      } else if (Game.getCurrentMove() == Direction::LEFT &&
+                 Game.getPreviousMove() != Direction::RIGHT) {
+        Game.setPreviousMove(Game.getCurrentMove());
+      } else if (Game.getCurrentMove() == Direction::RIGHT &&
+                 Game.getPreviousMove() != Direction::LEFT) {
+        Game.setPreviousMove(Game.getCurrentMove());
       }
 
-      // move the snake
       moveSnake(window);
-      // check if rat is eaten
-      checkAndMoveRat(window);
+      moveRat(window);
     }
 
     window.clear();
     // bonusLevelBackground(window);
-    drawGradientBackground(window); // experimental
+    drawGradientBackground(window);
+    // experimental
 
-    if (player.gameState == GameState::FINISH) {
-      sf::Text finishedText(
-          "Game FINSIHED; Your Score was : " + std::to_string(player.score) +
-              "\nPress "
-              "'R' to restart",
-          font, 30);
+    if (player.getGameState() == GameState::FINISH) {
+      sf::Text finishedText("Game FINSIHED; Your Score was : " +
+                                std::to_string(player.getScore()) +
+                                "\nPress "
+                                "'R' to restart",
+                            font, 30);
       finishedText.setStyle(sf::Text::Style::Bold);
       finishedText.setPosition(
           window.getSize().x / 2 - finishedText.getGlobalBounds().width / 2,
@@ -419,25 +356,22 @@ int main() {
 
       if (sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
         // Reset the game on any other key press
-        player.gameState = GameState::RUNNING;
-        snakeBody.clear();          // Clear snake segments
-        initGame(window.getSize()); // Initialize the game again
+        player.setGameState(GameState::RUNNING);
+        Game.getSnakeBody().clear();
+        initGame(window.getSize());
       }
     }
-    if (player.gameState == GameState::RUNNING) {
-      // settings
-      //   drawSettingsIcon(window);
-
+    if (player.getGameState() == GameState::RUNNING) {
       // draw
       drawSnake(window, font);
       drawRat(window, font);
 
       // show score
-      scoreText.setString("Score: " + std::to_string(player.score));
+      scoreText.setString("Score: " + std::to_string(player.getScore()));
       window.draw(scoreText);
 
       // bonus level message
-      if (isBonusLevel) {
+      if (Game.getIsBonusLevel()) {
         sf::Text bonusText("Bonus Level!", font, 30);
         bonusText.setPosition(
             (window.getSize().x / 2) - (bonusText.getGlobalBounds().width / 2),
@@ -447,6 +381,24 @@ int main() {
     }
     window.display();
   }
+}
+
+int main() {
+  // font init
+  sf::Font font;
+  if (!font.loadFromFile("./assets/fonts/shadows-into-light.ttf")) {
+    std::cerr << "Could not load font file" << std::endl;
+    return -1;
+  }
+  // Window creation
+  sf::RenderWindow window(sf::VideoMode(800, 800), "Snake And Rat",
+                          sf::Style::Resize | sf::Style::Close);
+
+  // fps limit
+  // window.setFramerateLimit(60); // 60FPS
+
+  initGame(window.getSize());
+  runGame(window, font);
 
   return 0;
 }
